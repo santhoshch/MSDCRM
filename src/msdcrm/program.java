@@ -1,5 +1,10 @@
 package msdcrm;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.Document;
@@ -7,7 +12,18 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 public class program {
-
+	
+	public static class Result {
+		Map<String, List<String>> id_map;
+		Boolean more;
+		
+		public Result(Map<String, List<String>> id_map2, Boolean more2) {
+			this.id_map = id_map2;
+			this.more = more2;
+		}
+	}
+	
+	
 	public static void main(String[] args) throws Exception {
 
 		CrmAuth auth = new CrmAuth();
@@ -33,7 +49,9 @@ public class program {
 			return;
 
 //		String name = CrmGetUserName(authHeader, id, url);
-		CrmGetOpportunityCount(authHeader, id, url);
+		List<String> fld_list = Arrays.asList("Id");
+//		CrmGetOpportunityCount(authHeader, "Audit", url, fld_list);
+		CrmGetOpportunityIds(authHeader, "Audit", url, fld_list);
 //		System.out.println(name);
 	}
 
@@ -127,7 +145,7 @@ public class program {
 	}
 	
 	public static String CrmGetOpportunityCount(CrmAuthenticationHeader authHeader,
-			String id, String url) throws IOException, SAXException,
+			String entity, String url, List<String> fld_list) throws IOException, SAXException,
 			ParserConfigurationException {
 		String multipleRequest = "<RetrieveMultiple xmlns=\"http://schemas.microsoft.com/xrm/2007/Contracts/Services\"  "
 				+ " xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\"> " +
@@ -142,7 +160,7 @@ public class program {
 		"       <b:Filters />" +
 		" </b:Criteria>" +
 //              " <b:Distinct>false</b:Distinct>" +
-              " <b:EntityName>Opportunity</b:EntityName>" +
+              " <b:EntityName>" + entity + "</b:EntityName>" +
 //              " <b:LinkEntities />" +
               " <b:Orders />" +
               " <b:PageInfo>" +
@@ -162,10 +180,16 @@ public class program {
         requestMain += "            <b:key>Query</b:key>";
         requestMain += "            <b:value i:type=\"a:QueryExpression\">";
         requestMain += "              <a:ColumnSet>";
-        requestMain += "                <a:AllColumns>true</a:AllColumns>";
-//        requestMain += "                <a:Columns xmlns:c=\"http://schemas.microsoft.com/2003/10/Serialization/Arrays\">";
-//        requestMain += "                  <c:string>name</c:string>";
-//        requestMain += "                </a:Columns>";
+        if (fld_list == null || fld_list.size() == 0) {
+        	requestMain += "                <a:AllColumns>true</a:AllColumns>";
+        } else{
+//        	requestMain += "                <a:AllColumns>false</a:AllColumns>";
+        	for (String fld : fld_list) {
+//        		requestMain += "                <a:Columns  xmlns:c=\"http://schemas.microsoft.com/2003/10/Serialization/Arrays\">";
+                requestMain += "                  <a:string>" + fld +"</a:string>";
+//                requestMain += "                </a:Columns>";
+        	}
+        }
         requestMain += "              </a:ColumnSet>";
 //        requestMain += "              <a:Criteria>";
 //        requestMain += "                <a:Conditions />";
@@ -218,8 +242,127 @@ public class program {
 //				lastname = nodes.item(i).getLastChild().getTextContent();
 //			}
 //		}
-
 //		return firstname + " " + lastname;
 		return "";
 	}
+
+	private static void CrmGetOpportunityIds(CrmAuthenticationHeader authHeader, String string, String url,
+			List<String> fld_list) {
+		int batch = 100;
+		int pg_num = 1;
+		boolean more = true;
+		List<String> master_id_list = new ArrayList<String>();
+		while (more) {
+			try {
+				Result res = CrmGetOpportunityIds(authHeader, "Audit", url, fld_list, batch, pg_num);
+				if (res.more) {
+					pg_num += 1;
+				}
+				System.out.println("id map keys" + res.id_map.keySet());
+				master_id_list.addAll(res.id_map.get("opportunity"));
+				if ( master_id_list.size() > 500) {
+					break;
+				}
+				System.out.println("size " + master_id_list.size());
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				more = false;
+			}
+		}
+		
+		
+	}
+	
+	public static Result CrmGetOpportunityIds(CrmAuthenticationHeader authHeader,
+			String entity, String url, List<String> fld_list, int cnt, int pg_num) throws IOException, SAXException,
+			ParserConfigurationException {
+		
+		String requestMain  ="";
+        requestMain += "    <Execute xmlns=\"http://schemas.microsoft.com/xrm/2011/Contracts/Services\" xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">";
+        requestMain += "      <request i:type=\"a:RetrieveMultipleRequest\" xmlns:a=\"http://schemas.microsoft.com/xrm/2011/Contracts\">";
+        requestMain += "        <a:Parameters xmlns:b=\"http://schemas.datacontract.org/2004/07/System.Collections.Generic\">";
+        requestMain += "          <a:KeyValuePairOfstringanyType>";
+        requestMain += "            <b:key>Query</b:key>";
+        requestMain += "            <b:value i:type=\"a:QueryExpression\">";
+        requestMain += "              <a:ColumnSet>";
+        if (fld_list == null || fld_list.size() == 0) {
+        	requestMain += "                <a:AllColumns>true</a:AllColumns>";
+        } else{
+        	for (String fld : fld_list) {
+                requestMain += "                  <a:string>" + fld +"</a:string>";
+        	}
+        }
+        requestMain += "              </a:ColumnSet>";
+//        requestMain += "              <a:Criteria>";
+//        requestMain += "                <a:Conditions />";
+//        requestMain += "                <a:FilterOperator>And</a:FilterOperator>";
+//        requestMain += "                <a:Filters />";
+//        requestMain += "              </a:Criteria>";
+        requestMain += "              <a:Distinct>false</a:Distinct>";
+        requestMain += "              <a:EntityName>opportunity</a:EntityName>";
+        requestMain += "              <a:Orders />";
+        requestMain += "              <a:PageInfo>";
+        requestMain += "                <a:Count>"+ cnt+ "</a:Count>";
+        requestMain += "                <a:PageNumber>" + pg_num + "</a:PageNumber>";
+        requestMain += "                <a:PagingCookie i:nil=\"true\" />";
+        requestMain += "                <a:ReturnTotalRecordCount>true</a:ReturnTotalRecordCount>";
+        requestMain += "              </a:PageInfo>";
+        requestMain += "              <a:NoLock>false</a:NoLock>";
+        requestMain += "            </b:value>";
+        requestMain += "          </a:KeyValuePairOfstringanyType>";
+        requestMain += "        </a:Parameters>";
+        requestMain += "        <a:RequestId i:nil=\"true\" />";
+        requestMain += "        <a:RequestName>RetrieveMultiple</a:RequestName>";
+        requestMain += "      </request>";
+        requestMain += "    </Execute>";
+		StringBuilder xml = new StringBuilder();
+		xml.append("<s:Body>");
+//		xml.append("<Execute  xmlns=\"http://schemas.microsoft.com/xrm/2011/Contracts/Services\" xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">");
+		xml.append(requestMain);
+//		xml.append("</Execute>");
+		xml.append("</s:Body>");
+
+//		System.out.println("request " + xml.toString());
+		Document xDoc = CrmExecuteSoap.ExecuteSoapRequest(authHeader,
+				xml.toString(), url);
+		
+		if (xDoc == null)
+			return null;
+
+//		System.out.println(" Output " + xDoc.toString());
+		NodeList nodes = xDoc.getElementsByTagName("b:Entity");
+		Map<String, List<String>>id_map = new HashMap<String, List<String>>();
+		for (int i = 0; i < nodes.getLength(); i++) {
+//			System.out.println(" Entity nodes  " + nodes.item(i).getNodeName());
+			NodeList childNodes = nodes.item(i).getChildNodes();
+			String id = null;
+			String name = null;
+			for (int j = 0; j < childNodes.getLength(); j++) {
+				if (childNodes.item(j).getNodeName() == "b:Id") {
+					id = childNodes.item(j).getTextContent();
+				}
+				if (childNodes.item(j).getNodeName() == "b:LogicalName") {
+					name = childNodes.item(j).getTextContent();
+				}
+				if ( id != null && name != null) {
+					if (id_map.get(name) == null ) {
+						List<String> id_list = new ArrayList<>();
+						id_map.put(name, id_list);
+					}
+					id_map.get(name).add(id);
+				}
+//				System.out.println(" nodes " + childNodes.item(j).getNodeName());
+			}
+		}
+		NodeList morerecord = xDoc.getElementsByTagName("b:MoreRecords");
+		Boolean more = Boolean.FALSE;
+		for (int k=0; k< morerecord.getLength(); k++){
+			more = Boolean.valueOf(morerecord.item(k).getTextContent());
+		}
+		return new Result(id_map, more);
+	}
+	
+	
+
 }
