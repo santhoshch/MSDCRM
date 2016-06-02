@@ -36,7 +36,7 @@ public class CrmExecuteSoap {
 		xml.append(authHeader.Header);
 		xml.append(requestBody);
 		xml.append("</s:Envelope>");
-		System.out.println("header " + xml.toString());
+//		System.out.println("header " + xml.toString());
 		URL SoapURL = new URL(url + "XRMServices/2011/Organization.svc");
 		HttpURLConnection rc = (HttpURLConnection) SoapURL.openConnection();
 
@@ -63,7 +63,7 @@ public class CrmExecuteSoap {
 		String response = sb.toString();
 		read.close();
 		rc.disconnect();
-		System.out.println("resposne " + response);
+//		System.out.println("resposne " + response);
 		DocumentBuilderFactory builderFactory = DocumentBuilderFactory
 				.newInstance();
 		DocumentBuilder builder = builderFactory.newDocumentBuilder();
