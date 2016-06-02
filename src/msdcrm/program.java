@@ -1,5 +1,9 @@
 package msdcrm;
+import java.io.BufferedWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -252,26 +256,41 @@ public class program {
 		int pg_num = 1;
 		boolean more = true;
 		List<String> master_id_list = new ArrayList<String>();
-		while (more) {
-			try {
-				Result res = CrmGetOpportunityIds(authHeader, "Audit", url, fld_list, batch, pg_num);
-				if (res.more) {
-					pg_num += 1;
-				}
-				System.out.println("id map keys" + res.id_map.keySet());
-				master_id_list.addAll(res.id_map.get("opportunity"));
-				if ( master_id_list.size() > 500) {
-					break;
-				}
-				System.out.println("size " + master_id_list.size());
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-				more = false;
+		Writer writer = null;
+		try {
+			while (more) {
+				try {
+					if (writer == null) {
+					    writer = new BufferedWriter(new OutputStreamWriter(
+					          new FileOutputStream("opportunity.txt"), "utf-8"));
+					}
+					Result res = CrmGetOpportunityIds(authHeader, "Audit", url, fld_list, batch, pg_num);
+					if (res.more) {
+						System.out.println("Adding the pg_num" + pg_num);
+						pg_num += 1;
+					}
+					System.out.println("id map keys" + res.id_map.keySet());
+					List<String> opp_ids = res.id_map.get("opportunity");
+					master_id_list.addAll(opp_ids);
+				
+				    for (String line:opp_ids) {
+				    	writer.write(line + "\n");
+				    }
+					System.out.println(" master_id_list size " + master_id_list.size() );
+					if ( master_id_list.size() > 500) {
+						System.out.println(" master_id_list break" );
+						break;
+					}
+					System.out.println("size " + master_id_list.size());
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+					more = false;
+				} 
 			}
+		} finally {
+			try {writer.close();} catch (Exception ex) {/*ignore*/}
 		}
-		
-		
 	}
 	
 	public static Result CrmGetOpportunityIds(CrmAuthenticationHeader authHeader,
@@ -333,26 +352,28 @@ public class program {
 //		System.out.println(" Output " + xDoc.toString());
 		NodeList nodes = xDoc.getElementsByTagName("b:Entity");
 		Map<String, List<String>>id_map = new HashMap<String, List<String>>();
+		System.out.println(" nodes.getLength(); " +  nodes.getLength());
 		for (int i = 0; i < nodes.getLength(); i++) {
 //			System.out.println(" Entity nodes  " + nodes.item(i).getNodeName());
 			NodeList childNodes = nodes.item(i).getChildNodes();
 			String id = null;
 			String name = null;
 			for (int j = 0; j < childNodes.getLength(); j++) {
+//				System.out.println("childNodes.getLength() " + childNodes.getLength());
 				if (childNodes.item(j).getNodeName() == "b:Id") {
 					id = childNodes.item(j).getTextContent();
 				}
 				if (childNodes.item(j).getNodeName() == "b:LogicalName") {
 					name = childNodes.item(j).getTextContent();
 				}
-				if ( id != null && name != null) {
-					if (id_map.get(name) == null ) {
-						List<String> id_list = new ArrayList<>();
-						id_map.put(name, id_list);
-					}
-					id_map.get(name).add(id);
-				}
 //				System.out.println(" nodes " + childNodes.item(j).getNodeName());
+			}
+			if ( id != null && name != null) {
+				if (id_map.get(name) == null ) {
+					List<String> id_list = new ArrayList<>();
+					id_map.put(name, id_list);
+				}
+				id_map.get(name).add(id);
 			}
 		}
 		NodeList morerecord = xDoc.getElementsByTagName("b:MoreRecords");
@@ -362,7 +383,4 @@ public class program {
 		}
 		return new Result(id_map, more);
 	}
-	
-	
-
 }
