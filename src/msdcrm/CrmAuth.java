@@ -289,7 +289,7 @@ public class CrmAuth {
 		xml.append("</trust:RequestSecurityToken>");
 		xml.append("</s:Body>");
 		xml.append("</s:Envelope>");
-
+		System.out.println("Auth request XML\n" + xml.toString());
 		URL mexURL = new URL(usernamemixed);
 		HttpURLConnection rc = (HttpURLConnection) mexURL.openConnection();
 
@@ -299,6 +299,8 @@ public class CrmAuth {
 		rc.setRequestProperty("Content-Type",
 				"application/soap+xml; charset=UTF-8");
 		String reqStr = xml.toString();
+//		reqStr = "<s:Envelope xmlns:s=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:a=\"http://www.w3.org/2005/08/addressing\"><s:Header><a:Action s:mustUnderstand=\"1\">http://docs.oasis-open.org/ws-sx/ws-trust/200512/RST/Issue</a:Action><a:MessageID>urn:uuid:"+java.util.UUID.randomUUID()+"</a:MessageID><a:ReplyTo><a:Address>http://www.w3.org/2005/08/addressing/anonymous</a:Address></a:ReplyTo><Security s:mustUnderstand=\"1\" xmlns:u=\"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd\" xmlns=\"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd\"><u:Timestamp  u:Id=\""+ java.util.UUID.randomUUID()+"\"><u:Created>2016-06-03T09:31:38.00Z</u:Created><u:Expires>2016-06-04T07:38:38.00Z</u:Expires></u:Timestamp><UsernameToken u:Id=\""+java.util.UUID.randomUUID()+"\"><Username>svc-aviso@varonis.com</Username><Password Type=\"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText\">S21LpcXwYRRNAZJMZz2Q</Password></UsernameToken></Security><a:To s:mustUnderstand=\"1\">https://sso2.varonis.com/adfs/services/trust/13/usernamemixed</a:To></s:Header><s:Body><trust:RequestSecurityToken xmlns:trust=\"http://docs.oasis-open.org/ws-sx/ws-trust/200512\"><wsp:AppliesTo xmlns:wsp=\"http://schemas.xmlsoap.org/ws/2004/09/policy\"><a:EndpointReference><a:Address>https://crmstg15.varonis.com/VaronisUAT/XRMServices/2011/Organization.svc</a:Address></a:EndpointReference></wsp:AppliesTo><trust:RequestType>http://docs.oasis-open.org/ws-sx/ws-trust/200512/Issue</trust:RequestType></trust:RequestSecurityToken></s:Body></s:Envelope>";
+		System.out.println(reqStr);
 		int len = reqStr.length();
 		rc.setRequestProperty("Content-Length", Integer.toString(len));
 		rc.connect();
@@ -316,7 +318,7 @@ public class CrmAuth {
 		String response = sb.toString();
 		read.close();
 		rc.disconnect();
-
+		System.out.println("Response after Auth\n "+ sb.toString());
 		DocumentBuilderFactory builderFactory = DocumentBuilderFactory
 				.newInstance();
 		DocumentBuilder builder = builderFactory.newDocumentBuilder();
@@ -380,7 +382,7 @@ public class CrmAuth {
 		authHeader.Header = CreateSoapHeaderOnPremise(url, keyIdentifer,
 				token1, token2, x509IssuerName, x509SerialNumber,
 				signatureValue, digestValue, created, expires);
-
+		System.out.println("Auth Header for next request\n" + authHeader.Header);
 		return authHeader;
 	}
 

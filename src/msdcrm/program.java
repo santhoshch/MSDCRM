@@ -31,15 +31,17 @@ public class program {
 			this.more = more2;
 		}
 	}
-	
-	
+	static String url;
+	static String username;
+	static String password;
+	static CrmAuth auth;
 	public static void main(String[] args) throws Exception {
 
-		CrmAuth auth = new CrmAuth();
+		auth = new CrmAuth();
 
-		String url = args[0];
-		String username =args[1]; 
-		String password = args[2];
+		url = args[0];
+		username =args[1]; 
+		password = args[2];
 		
 		// CRM Online
 //		CrmAuthenticationHeader authHeader = auth.GetHeaderOnline(username,		password, url);
@@ -212,7 +214,7 @@ public class program {
 				value = nodes.item(i).getLastChild().getTextContent();
 			}
 			if (value == "" || temp == value){
-				map.put(field, value.replace("\n", "").replace("\t", ""));
+				map.put(field, value.replace("\n", " ").replace("\t", " ").replace("\r", " "));
 			} else {
 //				System.out.println(i+field+value);
 				String ref_entity = nodes.item(i).getLastChild().getLastChild().getPreviousSibling().getTextContent();
@@ -226,7 +228,7 @@ public class program {
 
 	private static void CrmGetOpportunityIds(CrmAuthenticationHeader authHeader, String entity, String url,
 			List<String> fld_list, String entityname) {
-		int batch = 1000;
+		int batch = 500;
 		int pg_num = 1;
 		boolean more = true;
 		List<String> master_id_list = new ArrayList<String>();
@@ -243,7 +245,7 @@ public class program {
 					          new FileOutputStream("/home/santhosh/Desktop/"+entityname+"_ids.txt"), "utf-8"));
 					}
 					Result res = CrmGetids(authHeader, "Audit", url, fld_list, batch, pg_num, entityname, true);
-					more =res.more;
+					more = res.more;
 					if (more) {
 						System.out.println("Adding the pg_num" + pg_num);
 						pg_num += 1;
@@ -252,7 +254,6 @@ public class program {
 					List<String> opp_ids = res.id_map.get(entityname);
 					master_id_list.addAll(opp_ids);
 					if (opp_ids.size() !=0){
-						ArrayList<Map<String, String>> myArrList = new ArrayList<Map<String, String>>();
 						if (fwriter == null) {
 							map =CrmGetEntity(authHeader, entityname, url, fld_list, opp_ids.get(0));
 							field_list = new ArrayList<String>(map.keySet());
@@ -265,34 +266,17 @@ public class program {
 						// get request all attributes entiry from entity
 						for (String id: opp_ids){
 							cc +=1;
-							myArrList.clear();
 							try{
 								map =CrmGetEntity(authHeader, entityname, url, fld_list, id);
 							} catch(Exception e){
 								System.out.println("failed retrying again");
 								map =CrmGetEntity(authHeader, entityname, url, fld_list, id);
 							}
+							System.out.println("Fetched record num:"+cc);
+							each_record(fwriter, map, field_list);
 							
-							myArrList.add(map);
-							
-							
-							for (int i = 0; i < myArrList.size(); i++) {	
-								String temp = "",value = "";
-								for (String fld: field_list){
-									value = myArrList.get(i).get(fld);
-									if (value != null)
-										temp += value.toString();
-									if (field_list.indexOf(fld) != field_list.size()-1){
-										temp+="~";
-									}
-									
-								}
-								temp +="\n";
-								fwriter.write(temp);
-								System.out.println("fetched record num: "+cc);
-								
-							}
 						}
+						authHeader = auth.GetHeaderOnPremise(username, password, url);
 					}
 				
 				    for (String line:opp_ids) {
@@ -313,6 +297,30 @@ public class program {
 		} finally {
 			try {writer.close(); fwriter.close();} catch (Exception ex) {/*ignore*/}
 		}
+	}
+	public static void each_record(Writer fp, Map map, List<String> field_list) throws IOException{
+		ArrayList<Map<String, String>> myArrList = new ArrayList<Map<String, String>>();
+		myArrList.add(map);
+		
+		
+		for (int i = 0; i < myArrList.size(); i++) {	
+			String temp = "",value = "";
+			for (String fld: field_list){
+				value = myArrList.get(i).get(fld);
+				if (value != null)
+					temp += value.toString();
+				if (field_list.indexOf(fld) != field_list.size()-1)
+					temp+="~";
+				
+			}
+			temp +="\n";
+			fp.write(temp);
+		}
+		
+	}
+	public static void Crmidfromfile(CrmAuthenticationHeader authHeader, int lineno, String filepath, int pg_num) throws IOException, SAXException,
+	ParserConfigurationException {
+		
 	}
 	
 	public static Result CrmGetids(CrmAuthenticationHeader authHeader,
@@ -369,9 +377,10 @@ public class program {
 		xml.append("<s:Body>");
 //		xml.append("<Execute  xmlns=\"http://schemas.microsoft.com/xrm/2011/Contracts/Services\" xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">");
 		xml.append(requestMain);
+//		xml.append("<Execute xmlns=\"http://schemas.microsoft.com/xrm/2011/Contracts/Services\"			xmlns:i=\"http://www.w3.org/2001/XMLSchema-instance\">			<request i:type=\"a:RetrieveMultipleRequest\"				xmlns:a=\"http://schemas.microsoft.com/xrm/2011/Contracts\">				<a:Parameters					xmlns:b=\"http://schemas.datacontract.org/2004/07/System.Collections.Generic\">					<a:KeyValuePairOfstringanyType>						<b:key>Query</b:key>						<b:value i:type=\"a:QueryExpression\">							<a:ColumnSet>								<a:AllColumns>true</a:AllColumns>							</a:ColumnSet>							<a:Criteria>								<a:Conditions>								</a:Conditions>								<a:FilterOperator>And</a:FilterOperator>								<a:Filters />							</a:Criteria>							<a:Distinct>false</a:Distinct>							<a:EntityName>opportunity</a:EntityName>							<a:LinkEntities />							<a:Orders />							<a:PageInfo>								<a:Count>1</a:Count>								<a:PageNumber>1</a:PageNumber>								<a:PagingCookie i:nil=\"true\" />								<a:ReturnTotalRecordCount>true</a:ReturnTotalRecordCount>							</a:PageInfo>							<a:NoLock>false</a:NoLock>						</b:value>					</a:KeyValuePairOfstringanyType>				</a:Parameters>				<a:RequestId i:nil=\"true\" />				<a:RequestName>RetrieveMultiple</a:RequestName>			</request>		</Execute>");
 //		xml.append("</Execute>");
 		xml.append("</s:Body>");
-
+//		System.out.println(xml.toString());
 		Document xDoc = CrmExecuteSoap.ExecuteSoapRequest(authHeader,
 				xml.toString(), url);
 		
